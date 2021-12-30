@@ -1,0 +1,68 @@
+{
+  "Comment": "My first state machine",
+  "StartAt": "First Step",
+  "States": {
+    "First Step": {
+      "Type": "Task",
+      "Next": "Parallel Step",
+      "Resource": "${FirstStepArn}",
+      "ResultPath": "$.number"
+    },
+    "Parallel Step": {
+      "Type": "Parallel",
+      "Next": "Condition Step",
+      "ResultPath": "$.results",
+      "Branches": [
+        {
+          "StartAt": "First Validation",
+          "States": {
+            "First Validation": {
+              "Type": "Task",
+              "End": true,
+              "Resource": "${FirstValidArn}"
+            }
+          }
+        },
+        {
+          "StartAt": "Second Validation",
+          "States": {
+            "Second Validation": {
+              "Type": "Task",
+              "End": true,
+              "Resource": "${SecondValidArn}"
+            }
+          }
+        }
+      ]
+    },
+    "Condition Step": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            {
+              "Variable": "$.results[0]",
+              "BooleanEquals": true
+            },
+            {
+              "Variable": "$.results[1]",
+              "BooleanEquals": true
+            }
+          ],
+          "Next": "Validation Success"
+        }
+      ],
+      "Default": "Validation Failed"
+    },
+    "Validation Success": {
+      "Type": "Task",
+      "End": true,
+      "Resource": "${SuccessArn}"
+    },
+    "Validation Failed": {
+      "Type": "Task",
+      "End": true,
+      "Resource": "${FailedArn}"
+    }
+  }
+}

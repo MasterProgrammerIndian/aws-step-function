@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    CodeUri: functions/
+    Runtime: nodejs14.x
+    Timeout: 5
+
+Resources:
+  MyRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: dev
+
+  SamLogs:
+    Type: AWS::Logs::LogGroup
+
+  FirstStepFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: first_step.handler
+
+  FirstValidFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: first_valid.handler
+
+  SecondValidFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: second_valid.handler
+
+  SuccessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: success.handler
+
+  FailedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: failed.handler
+
+  SampleStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: STANDARD
+      DefinitionUri: statemachine/mymachine.asl.json
+      DefinitionSubstitutions:
+        FirstStepArn: !GetAtt FirstStepFunction.Arn
+        FirstValidArn: !GetAtt FirstValidFunction.Arn
+        SecondValidArn: !GetAtt SecondValidFunction.Arn
+        SuccessArn: !GetAtt SuccessFunction.Arn
+        FailedArn: !GetAtt FailedFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref FirstStepFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref FirstValidFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SecondValidFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SuccessFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref FailedFunction
+        - CloudWatchLogsFullAccess
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt SamLogs.Arn
+        IncludeExecutionData: true
+        Level: ALL
+
+      Events:
+        ValidationEvent:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /validate
+            RestApiId:
+              Ref: MyRestApi
